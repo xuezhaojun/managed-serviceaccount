@@ -12,8 +12,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+GOOS   ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
 export DOCKER_BUILDER ?= docker
-export CGO_ENABLED = 1
+export CGO_ENABLED = 0
 export GOFLAGS ?=
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -55,18 +58,20 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet ## Run tests.
-	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... -coverprofile cover.out
+ENVTEST = $(shell pwd)/bin/setup-envtest
+ENVTEST_K8S_VERSION = 1.35.0
+test: manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(shell pwd)/testbin -p path)" go test ./pkg/... -coverprofile cover.out
 
 ##@ Build
 
 build: generate fmt vet build-bin
 
+# build a fully self-contained clusterprofile credentials plugin binary
+# so it can run in arbitrary environments (e.g. scratch/distroless).
 build-bin:
-	go build -a -o bin/msa cmd/main.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags="-s -w" -a -o bin/msa cmd/main.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) go build -trimpath -ldflags="-s -w" -a -o bin/cp-creds cmd/clusterprofile-credentials-plugin/main.go
 
 build-e2e:
 	go test -c -o bin/e2e ./e2e/
@@ -109,6 +114,9 @@ lister-gen: ## Download lister-gen locally if necessary.
 INFORMER_GEN = $(shell pwd)/bin/informer-gen
 informer-gen: ## Download informer-gen locally if necessary.
 	$(call go-get-tool,$(INFORMER_GEN),k8s.io/code-generator/cmd/informer-gen@v0.29.2)
+
+envtest: ## Download envtest-setup locally if necessary.
+	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))

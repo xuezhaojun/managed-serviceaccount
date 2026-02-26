@@ -18,6 +18,13 @@ const (
 	// EphemeralIdentity allow user to set TTL on the ManagedServiceAccount resource
 	// via spec.ttlSecondsAfterCreation
 	EphemeralIdentity featuregate.Feature = "EphemeralIdentity"
+
+	// owner: @morvencao
+	// alpha: v0.1
+	//
+	// ClusterProfile enables the controller that watches ClusterProfile and
+	// ManagedServiceAccount resources, syncing token secrets to ClusterProfile namespaces
+	ClusterProfile featuregate.Feature = "ClusterProfile"
 )
 
 var (
@@ -35,4 +42,5 @@ func init() {
 // add it here.
 var DefaultManagedServiceAccountFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	EphemeralIdentity: {Default: false, PreRelease: featuregate.Alpha},
+	ClusterProfile:    {Default: false, PreRelease: featuregate.Alpha},
 }

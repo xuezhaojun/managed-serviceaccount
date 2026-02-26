@@ -78,7 +78,7 @@ jobs:
       - name: Install clusteradm
         run: curl -L https://raw.githubusercontent.com/open-cluster-management-io/clusteradm/main/install.sh | bash
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.13.0
+        uses: helm/kind-action@v1.14.0
       - name: Prepare OCM testing environment
         run: |
           clusteradm init --output-join-command-file join.sh --wait
@@ -91,11 +91,13 @@ jobs:
           kind load docker-image quay.io/open-cluster-management/managed-serviceaccount:latest --name chart-testing
       - name: Install latest managed-serviceaccount
         run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/cluster-inventory-api/refs/heads/main/config/crd/bases/multicluster.x-k8s.io_clusterprofiles.yaml
           helm install \
              -n open-cluster-management-addon --create-namespace \
              managed-serviceaccount charts/managed-serviceaccount/ \
              --set tag=latest \
-             --set featureGates.ephemeralIdentity=true
+             --set featureGates.ephemeralIdentity=true \
+             --set featureGates.clusterProfile=true
       - name: Run e2e test
         run: make test-e2e GENKGO_ARGS='--ginkgo.label-filter='\''!template-install'\'''
 
@@ -112,7 +114,7 @@ jobs:
       - name: Install clusteradm
         run: curl -L https://raw.githubusercontent.com/open-cluster-management-io/clusteradm/main/install.sh | bash
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.13.0
+        uses: helm/kind-action@v1.14.0
       - name: Prepare OCM testing environment
         run: |
           clusteradm init --output-join-command-file join.sh --wait
@@ -125,11 +127,13 @@ jobs:
           kind load docker-image quay.io/open-cluster-management/managed-serviceaccount:latest --name chart-testing
       - name: Install latest managed-serviceaccount
         run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/cluster-inventory-api/refs/heads/main/config/crd/bases/multicluster.x-k8s.io_clusterprofiles.yaml
           helm install \
             -n open-cluster-management-addon --create-namespace \
             managed-serviceaccount charts/managed-serviceaccount/ \
             --set tag=latest \
             --set featureGates.ephemeralIdentity=true \
+            --set featureGates.clusterProfile=true \
             --set hubDeployMode=AddOnTemplate \
             --set targetCluster=loopback
       - name: Run e2e test
